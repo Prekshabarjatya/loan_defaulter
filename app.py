@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 
 # Title of the app
 st.title("Loan Defaulter Prediction App")
@@ -29,40 +29,61 @@ def load_and_preprocess_data(file_path="LCDataDictionary.xlsx"):
 # Load the dataset
 X, y = load_and_preprocess_data()
 
-if X is not None:
-    # Display the dataset
-    st.subheader("Dataset Preview")
-    st.write(X.head())
+if X is not None and y is not None:
+    # Train/Test Split
+    st.subheader("Train the Model")
+    test_size = st.slider("Select Test Data Size", 0.1, 0.5, 0.2)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
 
-    # Display dataset statistics
-    st.subheader("Summary Statistics")
-    st.write(X.describe())
+    # Standardize features
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
-    # Train a basic Random Forest Classifier
-    st.subheader("Model Training")
-    if y is not None:
-        test_size = st.slider("Select Test Data Size", 0.1, 0.5, 0.2)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+    # Train the Random Forest Classifier
+    model = RandomForestClassifier()
+    model.fit(X_train, y_train)
 
-        # Standardize features
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_test = scaler.transform(X_test)
+    # Predictions on test data
+    y_pred = model.predict(X_test)
 
-        # Train the Random Forest Classifier
-        model = RandomForestClassifier()
-        model.fit(X_train, y_train)
+    # Display Model Performance
+    st.subheader("Model Performance")
+    st.write("Model Accuracy:", accuracy_score(y_test, y_pred))
+    st.text("Classification Report:")
+    st.text(classification_report(y_test, y_pred))
 
-        # Predictions
-        y_pred = model.predict(X_test)
+    # Predict defaulters based on user input
+    st.subheader("Predict Loan Default")
+    st.write("Enter details to predict if a loan will default:")
 
-        # Display Metrics
-        st.write("Model Accuracy:", accuracy_score(y_test, y_pred))
-        st.text("Classification Report:")
-        st.text(classification_report(y_test, y_pred))
+    # Create input fields for user-provided data
+    input_data = {}
+    for col in X.columns:
+        input_data[col] = st.text_input(f"Enter {col}:", "")
+
+    # When the user clicks "Predict"
+    if st.button("Predict"):
+        try:
+            # Convert input data to a DataFrame
+            input_df = pd.DataFrame([input_data])
+            input_df = input_df.apply(pd.to_numeric, errors='coerce')  # Handle numerical input
+
+            # Handle missing/invalid values
+            if input_df.isnull().values.any():
+                st.error("Please fill in all fields with valid numerical values.")
+            else:
+                # Scale the input data
+                input_scaled = scaler.transform(input_df)
+
+                # Make prediction
+                prediction = model.predict(input_scaled)
+                st.success(f"The loan is predicted to {'Default' if prediction[0] else 'Not Default'}.")
+        except Exception as e:
+            st.error(f"Error during prediction: {e}")
 
 else:
-    st.warning("The dataset couldn't be loaded. Please ensure the file exists and is correctly formatted.")
+    st.warning("The dataset couldn't be loaded or 'loan_status' column is missing. Please check the dataset.")
 
 # Footer
 st.sidebar.markdown("Developed by Preksha Barjatya")
