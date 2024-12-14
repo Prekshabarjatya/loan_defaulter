@@ -6,19 +6,18 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
-import joblib
 
 # Title of the app
 st.title("Loan Defaulter Prediction App")
 
 # Function to load and preprocess the dataset
 @st.cache_data
-def load_and_preprocess_data(file_path="data/LCDataDictionary.xlsx"):
+def load_and_preprocess_data(file_path="LCDataDictionary.xlsx"):
     try:
         # Load the Excel file
         df = pd.read_excel(file_path)
-        
-        # Drop unnecessary columns (update according to your file)
+
+        # Drop unnecessary columns
         X = df.drop(columns=["loan_status", "id", "member_id"], errors="ignore")  # Features
         y = df["loan_status"] if "loan_status" in df.columns else None  # Target
 
@@ -29,16 +28,16 @@ def load_and_preprocess_data(file_path="data/LCDataDictionary.xlsx"):
         st.error(f"Error loading the dataset: {e}")
         return None, None
 
-# Load the dataset from the specified path
+# Load the dataset
 X, y = load_and_preprocess_data()
 
 if X is not None:
     # Display the dataset
-    st.write("Preview of the dataset:")
+    st.subheader("Dataset Preview")
     st.write(X.head())
 
     # Display dataset statistics
-    st.write("Summary statistics of the dataset:")
+    st.subheader("Summary Statistics")
     st.write(X.describe())
 
     # Data Visualization
@@ -65,39 +64,31 @@ if X is not None:
     sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
     st.pyplot(plt.gcf())
 
-    # Train a simple RandomForest Classifier model
+    # Train a basic Random Forest Classifier
+    st.subheader("Model Training")
     if y is not None:
-        st.subheader("Train a Loan Default Prediction Model")
+        test_size = st.slider("Select Test Data Size", 0.1, 0.5, 0.2)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
 
-        # Splitting the data
-        st.write("Splitting the data into training and testing sets...")
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Feature Scaling
+        # Standardize features
         scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
 
-        # Model Training
-        st.write("Training the RandomForest Classifier...")
+        # Train the Random Forest Classifier
         model = RandomForestClassifier()
-        model.fit(X_train_scaled, y_train)
+        model.fit(X_train, y_train)
 
-        # Model Prediction
-        y_pred = model.predict(X_test_scaled)
+        # Predictions
+        y_pred = model.predict(X_test)
 
-        # Model Evaluation
-        st.write("### Model Evaluation:")
-        st.write("Accuracy Score:", accuracy_score(y_test, y_pred))
-        st.write("Classification Report:")
+        # Display Metrics
+        st.write("Model Accuracy:", accuracy_score(y_test, y_pred))
+        st.text("Classification Report:")
         st.text(classification_report(y_test, y_pred))
-
-        # Save the trained model
-        joblib.dump(model, "loan_default_model.pkl")
-        st.success("Model training complete and saved as 'loan_default_model.pkl'")
 
 else:
     st.warning("The dataset couldn't be loaded. Please ensure the file exists and is correctly formatted.")
 
 # Footer
-st.sidebar.markdown("Developed by Team 33")
+st.sidebar.markdown("Developed by Preksha Barjatya")
