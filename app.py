@@ -47,7 +47,7 @@ if X is not None:
     if "annual_inc" in X.columns:
         st.write("Distribution of Annual Income:")
         plt.figure(figsize=(10, 5))
-        sns.histplot(X["annual_inc"], kde=True, bins=10)
+        sns.histplot(X["annual_inc"].dropna(), kde=True, bins=10)
         st.pyplot(plt.gcf())
 
     # Loan Status Distribution
@@ -59,8 +59,10 @@ if X is not None:
 
     # Correlation heatmap
     st.write("Correlation Heatmap:")
+    numeric_X = X.select_dtypes(include=["number"])  # Select only numeric columns
+    numeric_X = numeric_X.fillna(0)  # Fill missing values with 0
     plt.figure(figsize=(12, 6))
-    corr = X.corr()
+    corr = numeric_X.corr()
     sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
     st.pyplot(plt.gcf())
 
@@ -68,7 +70,7 @@ if X is not None:
     st.subheader("Model Training")
     if y is not None:
         test_size = st.slider("Select Test Data Size", 0.1, 0.5, 0.2)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(numeric_X, y, test_size=test_size, random_state=42)
 
         # Standardize features
         scaler = StandardScaler()
