@@ -1,0 +1,44 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import pickle
+
+# Load the Excel file
+data = pd.read_excel('LCDataDictionary.xlsx')  # Make sure the file path is correct
+
+# Display the first few rows to understand the data structure
+print(data.head())
+
+# Preprocess the data
+# Fill missing values with the column's mean (if applicable)
+data = data.fillna(data.mean())
+
+# Convert categorical columns into numerical format using one-hot encoding or label encoding
+# For example, if 'gender' and 'education' are categorical, encode them
+# Assuming 'loan_status' is the target column
+data = pd.get_dummies(data, drop_first=True)  # One-hot encoding for categorical columns
+
+# Separate features (X) and target (y)
+X = data.drop(columns=['loan_status'])  # Replace 'loan_status' with your actual target column
+y = data['loan_status']  # Target variable
+
+# Split the dataset into training and testing sets (80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train a RandomForestClassifier model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Predict the target on the test set and calculate accuracy
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Model Accuracy: {accuracy * 100:.2f}%")
+
+# Save the trained model to a file (for use later in Streamlit)
+with open('ML_Model.pkl', 'wb') as f:
+    pickle.dump(model, f)
+
+# Optionally, save the feature names to use in the Streamlit app
+with open('features.pkl', 'wb') as f:
+    pickle.dump(X.columns.tolist(), f)
