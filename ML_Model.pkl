@@ -1,44 +1,40 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
 import pickle
 
-# Load the Excel file
-data = pd.read_excel('LCDataDictionary.xlsx')  # Make sure the file path is correct
+# Load the dataset
+data = pd.read_excel('loan_dataset.xlsx')
 
-# Display the first few rows to understand the data structure
-print(data.head())
+# Preprocess the dataset
+# Drop unnecessary columns
+columns_to_drop = ['id', 'member_id', 'url', 'zip_code', 'addr_state', 'desc']  # Adjust as per dataset
+data = data.drop(columns=columns_to_drop, errors='ignore')
 
-# Preprocess the data
-# Fill missing values with the column's mean (if applicable)
-data = data.fillna(data.mean())
+# Handle missing values (example: filling with mean)
+data = data.fillna(data.mean(numeric_only=True))
 
-# Convert categorical columns into numerical format using one-hot encoding or label encoding
-# For example, if 'gender' and 'education' are categorical, encode them
-# Assuming 'loan_status' is the target column
-data = pd.get_dummies(data, drop_first=True)  # One-hot encoding for categorical columns
+# Encode categorical variables
+categorical_columns = ['term', 'grade', 'sub_grade', 'emp_title', 'home_ownership', 'verification_status',
+                       'purpose', 'title', 'application_type']
+data = pd.get_dummies(data, columns=categorical_columns, drop_first=True)
 
-# Separate features (X) and target (y)
-X = data.drop(columns=['loan_status'])  # Replace 'loan_status' with your actual target column
-y = data['loan_status']  # Target variable
+# Define features (X) and target (y)
+if 'loan_status' in data.columns:
+    X = data.drop(columns=['loan_status'])
+    y = data['loan_status']
+else:
+    raise KeyError("'loan_status' column not found in the dataset.")
 
-# Split the dataset into training and testing sets (80% train, 20% test)
+# Train/test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Train a RandomForestClassifier model
+# Train the model
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-# Predict the target on the test set and calculate accuracy
-y_pred = model.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Model Accuracy: {accuracy * 100:.2f}%")
+# Save the model to a file
+with open('ML_Model.pkl', 'wb') as file:
+    pickle.dump(model, file)
 
-# Save the trained model to a file (for use later in Streamlit)
-with open('ML_Model.pkl', 'wb') as f:
-    pickle.dump(model, f)
-
-# Optionally, save the feature names to use in the Streamlit app
-with open('features.pkl', 'wb') as f:
-    pickle.dump(X.columns.tolist(), f)
+print("Model has been trained and saved as 'ML_Model.pkl'.")
