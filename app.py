@@ -83,4 +83,25 @@ def run():
             duration = 480
 
         # Prepare features for prediction
-        features = [[gen, mar, dep, edu, e
+        features = [[gen, mar, dep, edu, emp, mon_income, co_mon_income, loan_amt, duration, cred, prop]]
+
+        # Prediction button
+        if st.button("Submit"):
+            prediction = model.predict(features)
+            result = int("".join(map(str, prediction)))
+
+            # Display result based on prediction
+            if result == 0:
+                st.error(
+                    f"Hello: {fn} || Account number: {account_no} || "
+                    "According to our calculations, you will not get the loan from the bank."
+                )
+            else:
+                st.success(
+                    f"Hello: {fn} || Account number: {account_no} || "
+                    "Congratulations!! You will get the loan from the bank."
+                )
+
+# Run the Streamlit app
+if __name__ == "__main__":
+    run()
