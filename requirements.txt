@@ -1,6 +1,23 @@
-streamlit
-pandas
-numpy
-scikit-learn
-openpyxl
-matplotlib
+# Core dependencies for Streamlit
+streamlit==1.20.0
+
+# Data handling
+pandas==2.1.0
+
+# Machine learning libraries
+scikit-learn==1.3.0
+
+# Visualization
+matplotlib==3.8.0
+seaborn==0.12.2
+
+# Data processing
+numpy==1.23.5
+
+# File handling (for working with different file types like Excel)
+openpyxl==3.1.2
+
+# Miscellaneous
+joblib==1.3.0
+xgboost==1.7.6
+lightgbm==3.3.2
