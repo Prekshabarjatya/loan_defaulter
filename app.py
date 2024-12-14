@@ -61,13 +61,43 @@ if X is not None:
     # Correlation heatmap
     st.write("Correlation Heatmap:")
     plt.figure(figsize=(12, 6))
-        corr = X.corr()
-        sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
-        st.pyplot(plt.gcf())
+    corr = X.corr()
+    sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
+    st.pyplot(plt.gcf())
+
+    # Train a simple RandomForest Classifier model
+    if y is not None:
+        st.subheader("Train a Loan Default Prediction Model")
+
+        # Splitting the data
+        st.write("Splitting the data into training and testing sets...")
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Feature Scaling
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+        # Model Training
+        st.write("Training the RandomForest Classifier...")
+        model = RandomForestClassifier()
+        model.fit(X_train_scaled, y_train)
+
+        # Model Prediction
+        y_pred = model.predict(X_test_scaled)
+
+        # Model Evaluation
+        st.write("### Model Evaluation:")
+        st.write("Accuracy Score:", accuracy_score(y_test, y_pred))
+        st.write("Classification Report:")
+        st.text(classification_report(y_test, y_pred))
+
+        # Save the trained model
+        joblib.dump(model, "loan_default_model.pkl")
+        st.success("Model training complete and saved as 'loan_default_model.pkl'")
 
 else:
     st.warning("The dataset couldn't be loaded. Please ensure the file exists and is correctly formatted.")
 
 # Footer
 st.sidebar.markdown("Developed by Team 33")
-
