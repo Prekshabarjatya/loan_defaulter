@@ -11,8 +11,8 @@ import os
 @st.cache
 def load_data(uploaded_file=None):
     if uploaded_file is not None:
-        # Load data from the uploaded file
-        data = pd.read_csv(uploaded_file)
+        # Load data from the uploaded Excel file
+        data = pd.read_excel(uploaded_file)
     else:
         # Handle the case where no file is uploaded
         data = None
@@ -58,8 +58,8 @@ def plot_data(data):
 def app():
     st.title("LendingClub Loan Default Risk Prediction")
     
-    # File uploader for CSV file
-    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    # File uploader for Excel file
+    uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
     
     # Load and preprocess the data
     data = load_data(uploaded_file)
@@ -94,7 +94,7 @@ def app():
             else:
                 st.write("Loan is likely to be fully paid.")
     else:
-        st.write("Please upload a CSV file to proceed.")
+        st.write("Please upload an Excel file to proceed.")
     
 # Run the app
 if __name__ == "__main__":
