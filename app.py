@@ -1,69 +1,98 @@
 import streamlit as st
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+import pickle
 
-# Title of the app
-st.title("Loan Defaulter Prediction App")
+# Function to load data
+def load_data():
+    uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
+    if uploaded_file is not None:
+        data = pd.read_excel(uploaded_file)
+        return data
+    else:
+        st.warning("Please upload an Excel file.")
+        return None
 
-# Function to load and preprocess the dataset
-@st.cache_data
-def load_and_preprocess_data(file_path="LCDataDictionary.xlsx"):
-    try:
-        # Load the dataset
-        df = pd.read_excel(file_path)
+# Preprocessing the data
+def preprocess_data(data):
+    # Drop columns that are not useful for modeling
+    drop_columns = [
+        "id", "member_id", "emp_title", "url", "desc", "zip_code", "title", "next_pymnt_d"
+    ]
+    data = data.drop(columns=drop_columns, errors='ignore')
 
-        # Strip column names to remove extra spaces
-        df.columns = df.columns.str.strip()
+    # Handle missing values (simple imputation with median)
+    data = data.fillna(data.median(numeric_only=True))
 
-        # Check if 'loan_status' exists
-        if 'loan_status' not in df.columns:
-            st.error("The 'loan_status' column is missing in the dataset.")
-            return None, None
-        
-        # Prepare features (X) and target (y)
-        X = df.drop(columns=["loan_status", "id", "member_id"], errors="ignore")
-        y = df["loan_status"]
+    # Convert categorical columns to dummy variables
+    categorical_cols = data.select_dtypes(include=['object']).columns
+    data = pd.get_dummies(data, columns=categorical_cols, drop_first=True)
 
-        return X.fillna(0), y
-    except Exception as e:
-        st.error(f"Error loading the dataset: {e}")
-        return None, None
+    return data
 
-# Load the dataset
-X, y = load_and_preprocess_data()
+# Train the Random Forest model
+def train_model(data):
+    # Split into features and target
+    X = data.drop(columns=["loan_status"])
+    y = (data["loan_status"] == "Charged Off").astype(int)  # Binary classification: Default vs Non-default
 
-if X is not None and y is not None:
-    # Encode target variable
-    y = y.astype('category').cat.codes
+    # Split into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Train-Test Split
-    st.subheader("Model Training")
-    test_size = st.slider("Select Test Data Size", 0.1, 0.5, 0.2)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
-
-    # Standardize features
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
-
-    # Train the Random Forest Classifier
-    model = RandomForestClassifier()
+    # Train the model
+    model = RandomForestClassifier(random_state=42)
     model.fit(X_train, y_train)
 
-    # Make predictions
+    # Evaluate the model
     y_pred = model.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    st.write("Model Accuracy:", accuracy)
+    st.write("Confusion Matrix:", confusion_matrix(y_test, y_pred))
+    st.write("Classification Report:", classification_report(y_test, y_pred))
 
-    # Display metrics
-    st.subheader("Model Performance")
-    st.write("Accuracy:", accuracy_score(y_test, y_pred))
-    st.text("Classification Report:")
-    st.text(classification_report(y_test, y_pred))
+    return model, X.columns
 
-else:
-    st.warning("The dataset couldn't be loaded or 'loan_status' column is missing. Please check the dataset.")
+# Streamlit app
+st.title("Loan Default Prediction App")
+st.write("This app predicts whether a loan will default using a Random Forest model.")
 
-# Footer
-st.sidebar.markdown("Developed by Preksha Barjatya")
+# Load and preprocess data
+st.header("Data Loading and Preprocessing")
+data = load_data()
+if data is not None:
+    st.write("Dataset Loaded:", data.head())
+    processed_data = preprocess_data(data)
+    st.write("Processed Data:", processed_data.head())
+
+    # Train model
+    st.header("Model Training")
+    model, feature_names = train_model(processed_data)
+
+    # Save the model
+    with open("random_forest_model.pkl", "wb") as f:
+        pickle.dump(model, f)
+
+    st.write("Model training complete and saved as random_forest_model.pkl.")
+
+    # Prediction
+    st.header("Make Predictions")
+
+    def user_input_features():
+        input_data = {}
+        for feature in feature_names:
+            input_data[feature] = st.sidebar.number_input(feature, value=0.0)
+        return pd.DataFrame([input_data])
+
+    input_df = user_input_features()
+    st.write("User Input Features:", input_df)
+
+    if st.button("Predict"):
+        loaded_model = pickle.load(open("random_forest_model.pkl", "rb"))
+        prediction = loaded_model.predict(input_df)
+        prediction_proba = loaded_model.predict_proba(input_df)
+
+        st.write("Prediction:", "Default" if prediction[0] == 1 else "Non-default")
+        st.write("Prediction Probability:", prediction_proba)
