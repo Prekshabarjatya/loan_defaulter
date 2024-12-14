@@ -1,11 +1,14 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
-import os
+import joblib
+
+# Load the pretrained model (Ensure you have a model saved in .pkl format)
+# Pretrained model should be trained on similar dataset structure
+@st.cache
+def load_model():
+    model = joblib.load('random_forest_model.pkl')  # Load your saved model here
+    return model
 
 # Load the data (use file uploader if the file is not found)
 @st.cache
@@ -18,84 +21,74 @@ def load_data(uploaded_file=None):
         data = None
     return data
 
-# Preprocess the data (handle missing values, etc.)
-def preprocess_data(data):
-    # Handle missing values (simple example)
-    data = data.dropna()
-    return data
+# Function to match columns and extract relevant features
+def match_columns(data, model):
+    # Get the feature names used by the pretrained model
+    feature_names = model.feature_names_in_
 
-# Train the model
-def train_model(data):
-    # Feature selection and target variable
-    # Assuming the column indicating loan default is 'default'
-    X = data.drop(columns=["default"])  # Remove the target column from features
-    y = data["default"]  # Target variable (1 for default, 0 for no default)
+    # Let user match the dataset columns with model's expected columns
+    matched_columns = {}
     
-    # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    for feature in feature_names:
+        if feature in data.columns:
+            matched_columns[feature] = feature
+        else:
+            matched_columns[feature] = None
     
-    # Train the random forest classifier
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-    
-    # Evaluate the model
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f"Model Accuracy: {accuracy:.2f}")
-    st.write(classification_report(y_test, y_pred))
-    
-    return model
+    return matched_columns
 
-# Visualize the data
-def plot_data(data):
-    st.subheader("Loan Default Status Distribution")
-    sns.countplot(x="default", data=data)
-    st.pyplot()
-
-    # Additional visualizations can be added here
+# Function to predict loan default based on user input
+def predict_loan_default(user_input, model, feature_names):
+    # Ensure user input matches model's expected input features
+    user_data = [user_input]
+    prediction = model.predict(user_data)
+    return prediction[0]
 
 # Build the main app function
 def app():
-    st.title("LendingClub Loan Default Risk Prediction")
-    
-    # File uploader for Excel file
+    st.title("LendingClub Loan Default Prediction")
+
+    # Upload Excel file
     uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
-    
+
     # Load and preprocess the data
-    data = load_data(uploaded_file)
-    if data is not None:
-        data = preprocess_data(data)
-        
-        # Display basic statistics and data exploration
+    if uploaded_file is not None:
+        data = load_data(uploaded_file)
         st.subheader("Data Preview")
         st.write(data.head())
         
-        # Show data visualizations
-        plot_data(data)
+        # Load the pretrained model
+        model = load_model()
+
+        # Match columns between the uploaded data and model's expected columns
+        matched_columns = match_columns(data, model)
+        st.subheader("Column Mapping")
+        st.write(matched_columns)
+
+        # Let the user input their data for prediction
+        st.subheader("Enter Your Loan Details for Prediction")
+
+        user_input = []
         
-        # Train the machine learning model
-        model = train_model(data)
-        
-        # User input for prediction
-        st.subheader("Loan Application Prediction")
-        
-        applicant_income = st.number_input("Applicant Income", min_value=1000, max_value=1000000, step=1000)
-        loan_amount = st.number_input("Loan Amount", min_value=1000, max_value=1000000, step=1000)
-        # Additional features can be added here
-        
-        # Create a feature vector for the user input
-        user_input = [[applicant_income, loan_amount]]
-        
-        # Predict loan default status
-        if st.button("Predict"):
-            prediction = model.predict(user_input)
+        # Collect user input for each feature
+        for feature in matched_columns:
+            if matched_columns[feature]:
+                value = st.number_input(f"Enter {feature}", value=0)
+                user_input.append(value)
+            else:
+                user_input.append(0)  # Default to 0 if the column is not matched
+
+        # Button to trigger prediction
+        if st.button("Predict Default"):
+            prediction = predict_loan_default(user_input, model, matched_columns)
             if prediction == 1:
                 st.write("Loan is likely to default (Charged-off).")
             else:
                 st.write("Loan is likely to be fully paid.")
+
     else:
         st.write("Please upload an Excel file to proceed.")
-    
+
 # Run the app
 if __name__ == "__main__":
     app()
