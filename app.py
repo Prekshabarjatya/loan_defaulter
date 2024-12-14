@@ -1,5 +1,4 @@
 import streamlit as st
-from PIL import Image
 import pickle
 import os
 
@@ -15,11 +14,6 @@ def load_model(model_path):
 
 # Function to run the Streamlit app
 def run():
-    # Display app image
-    img1 = Image.open('bank.png')
-    img1 = img1.resize((156, 145))
-    st.image(img1, use_column_width=False)
-
     # Title of the app
     st.title("Bank Loan Prediction using Machine Learning")
 
