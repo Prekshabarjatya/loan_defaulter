@@ -1,114 +1,84 @@
 import pandas as pd
-import numpy as np
 import streamlit as st
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report
 
 # Function to load and preprocess the data
 def load_and_preprocess_data(file):
     # Read the Excel file
     data = pd.read_excel(file, engine='openpyxl')
     
-    # Display the first few rows of the data
+    # Display the first few rows of the data for inspection
     st.write("Preview of Dataset:")
     st.write(data.head())
     
-    # Columns to drop (change these as per the dataset)
-    drop_columns = ["loan_status", "id", "member_id"]
+    # Display the columns to verify the correct column names
+    st.write("Columns in the dataset:")
+    st.write(data.columns)
     
-    # Only drop columns that exist in the dataset
-    data = data.drop(columns=[col for col in drop_columns if col in data.columns], errors='ignore')
+    # Normalize column names (convert to lowercase and remove extra spaces)
+    data.columns = data.columns.str.strip().str.lower()
     
-    # Check if 'loan_status' is in the dataset and set it as target
+    # Check if 'loan_status' exists in the columns
     if 'loan_status' in data.columns:
-        X = data.drop(columns=["loan_status"])  # drop 'loan_status' if it exists
-        y = data["loan_status"].apply(lambda x: 1 if x == "Default" else 0)  # binary target (Default = 1, Not Default = 0)
+        X = data.drop(columns=["loan_status", "id", "member_id"])  # Drop 'loan_status', 'id', and 'member_id'
+        y = data["loan_status"].apply(lambda x: 1 if x == "Default" else 0)  # Convert loan status to binary (1 = Default, 0 = Not Default)
     else:
         st.error("Target column 'loan_status' is missing from the dataset.")
         return None, None
     
-    # Handle missing values by filling with median (you can customize this approach)
+    # Handle missing values by filling with the median
     X.fillna(X.median(), inplace=True)
     
-    # Normalize features using StandardScaler
+    # Standardize the feature data
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
     return X_scaled, y
 
-# Function to train the RandomForest model
-def train_model(X_train, y_train):
-    rf = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf.fit(X_train, y_train)
-    return rf
+# Streamlit UI setup
+st.title("Loan Default Prediction App")
 
-# Function to predict and display the results
-def make_predictions(model, X_test):
-    y_pred = model.predict(X_test)
-    y_prob = model.predict_proba(X_test)[:, 1]  # Get probabilities for "Default" class
-    return y_pred, y_prob
-
-# File uploader for Excel (.xlsx)
-uploaded_file = st.file_uploader("Upload your LCDataDictionary.xlsx file here", type=["xlsx"])
+# File upload feature
+uploaded_file = st.file_uploader("Upload Your Excel File", type=["xlsx"])
 
 if uploaded_file is not None:
-    # Load and preprocess the data
     X, y = load_and_preprocess_data(uploaded_file)
-    
+
     if X is not None and y is not None:
         # Split the data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
-        # Train the Random Forest model
-        model = train_model(X_train, y_train)
-        
-        # Predict on the test set and get the confidence (probabilities)
-        y_pred, y_prob = make_predictions(model, X_test)
-        
-        # Calculate accuracy on the test set
-        accuracy = accuracy_score(y_test, y_pred)
-        
-        # Display model results
-        st.write(f"Model Accuracy: {accuracy * 100:.2f}%")
-        
-        # Display confidence for each test sample
-        st.write("Prediction Results (Test Set):")
-        results = pd.DataFrame({
-            'Predicted Default': y_pred,
-            'Confidence (Probability)': y_prob
-        })
-        
-        st.write(results.head())  # Preview the results
 
-        # Option to test a new input (prediction from user)
-        st.write("Make a prediction for a new borrower:")
-        
-        # Example: Input fields for the user to provide data for a new borrower
-        loan_amnt = st.number_input("Loan Amount", min_value=0)
-        annual_inc = st.number_input("Annual Income", min_value=0)
-        dti = st.number_input("Debt-to-Income Ratio", min_value=0.0)
-        term = st.selectbox("Loan Term", options=["36 months", "60 months"])
-        int_rate = st.number_input("Interest Rate", min_value=0.0)
-        
-        # Additional fields can be added here based on the dataset
-        
-        # If the user has inputted data, make predictions
-        if st.button("Predict Borrower Default"):
-            # Prepare the input data for prediction
-            new_data = np.array([[loan_amnt, annual_inc, dti, int_rate]])  # Modify based on your features
-            new_data_scaled = StandardScaler().fit_transform(new_data)  # Standardize the input data
-            
-            # Predict using the trained model
-            prediction = model.predict(new_data_scaled)
-            prediction_prob = model.predict_proba(new_data_scaled)[:, 1]
-            
-            # Display prediction and confidence
-            if prediction[0] == 1:
-                st.write(f"The borrower is predicted to default with {prediction_prob[0] * 100:.2f}% confidence.")
-            else:
-                st.write(f"The borrower is predicted NOT to default with {(1 - prediction_prob[0]) * 100:.2f}% confidence.")
+        # Train the model
+        model = RandomForestClassifier(n_estimators=100, random_state=42)
+        model.fit(X_train, y_train)
 
-else:
-    st.info("Please upload the LCDataDictionary.xlsx file to proceed.")
+        # Predict on the test set
+        y_pred = model.predict(X_test)
+        y_pred_prob = model.predict_proba(X_test)[:, 1]  # Probability of default (class 1)
+
+        # Display results
+        st.write(f"Classification Report:\n{classification_report(y_test, y_pred)}")
+
+        # Display a prediction example
+        st.write("Prediction Example (First Record in Test Set):")
+        example_index = 0
+        example_pred = y_pred[example_index]
+        example_pred_prob = y_pred_prob[example_index]
+        st.write(f"Predicted: {'Default' if example_pred == 1 else 'No Default'}")
+        st.write(f"Confidence: {example_pred_prob * 100:.2f}%")
+        
+        # Prediction button
+        st.subheader("Make a Prediction")
+        input_data = []
+        for column in X.columns:
+            input_data.append(st.number_input(f"Enter value for {column}", value=0.0))
+
+        # Make prediction on new data
+        if st.button("Predict"):
+            prediction = model.predict([input_data])
+            confidence = model.predict_proba([input_data])[0][1]  # Get probability of default
+            st.write(f"Prediction: {'Default' if prediction[0] == 1 else 'No Default'}")
+            st.write(f"Confidence: {confidence * 100:.2f}%")
