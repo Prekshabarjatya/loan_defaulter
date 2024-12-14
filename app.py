@@ -7,33 +7,32 @@ from sklearn.metrics import classification_report, accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Title of the app
 st.title("Loan Defaulter Prediction App")
 
-# Function to load and preprocess the dataset from a fixed Excel file
-@st.cache
-def load_and_preprocess_data(file_path="data/LoanData.xlsx"):
+# Function to load and preprocess the dataset
+@st.cache_data
+def load_and_preprocess_data(file_path="data/LCDataDictionary.xlsx"):
     try:
         # Load the Excel file
         df = pd.read_excel(file_path)
         
-        # Drop unnecessary columns if they exist
+        # Drop unnecessary columns (update according to your file)
         X = df.drop(columns=["loan_status", "id", "member_id"], errors="ignore")  # Features
-        y = df["loan_status"]  # Target
+        y = df["loan_status"] if "loan_status" in df.columns else None  # Target
+
+        if y is None:
+            st.warning("The 'loan_status' column is missing in the dataset.")
         return X, y
     except Exception as e:
         st.error(f"Error loading the dataset: {e}")
         return None, None
 
-# Load the dataset from a fixed path
+# Load the dataset from the specified path
 X, y = load_and_preprocess_data()
 
-if X is not None and y is not None:
+if X is not None:
     # Display the dataset
     st.write("Preview of the dataset:")
     st.write(X.head())
@@ -45,7 +44,7 @@ if X is not None and y is not None:
     # Data Visualization
     st.subheader("Data Visualization")
 
-    # Distribution of annual income
+    # Distribution of a numerical column
     if "annual_inc" in X.columns:
         st.write("Distribution of Annual Income:")
         plt.figure(figsize=(10, 5))
@@ -53,17 +52,21 @@ if X is not None and y is not None:
         st.pyplot(plt.gcf())
 
     # Loan Status Distribution
-    st.write("Loan Status Distribution:")
-    plt.figure(figsize=(8, 4))
-    sns.countplot(x=y)
-    st.pyplot(plt.gcf())
+    if y is not None:
+        st.write("Loan Status Distribution:")
+        plt.figure(figsize=(8, 4))
+        sns.countplot(x=y)
+        st.pyplot(plt.gcf())
 
     # Correlation heatmap
     st.write("Correlation Heatmap:")
     plt.figure(figsize=(12, 6))
-    corr = X.corr()
-    sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
-    st.pyplot(plt.gcf())
+        corr = X.corr()
+        sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
+        st.pyplot(plt.gcf())
+
+else:
+    st.warning("The dataset couldn't be loaded. Please ensure the file exists and is correctly formatted.")
 
 # Footer
 st.sidebar.markdown("Developed by Team 33")
