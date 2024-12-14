@@ -8,6 +8,7 @@ def load_data():
     try:
         # Load your dataset (replace with your actual dataset path)
         data = pd.read_csv("your_dataset.csv")
+        print("Data loaded successfully.")
         return data
     except FileNotFoundError:
         print("Error: Dataset file not found.")
@@ -20,7 +21,7 @@ def preprocess_data(data):
     # Handle missing values and other preprocessing tasks
     # Example: Fill missing values with the mean (this should be adapted to your dataset)
     data = data.fillna(data.mean())
-    # You can add more preprocessing steps here (like encoding categorical columns)
+    print(f"Data after preprocessing: {data.head()}")
     return data
 
 def train_model(data):
@@ -28,11 +29,14 @@ def train_model(data):
     if "loan_status" in data.columns:
         X = data.drop(columns=["loan_status"])
         y = data["loan_status"]
+        print(f"Features: {X.head()}")
+        print(f"Target: {y.head()}")
     else:
         raise KeyError("The 'loan_status' column is missing from the dataset.")
     
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    print(f"Training data size: {X_train.shape}, Test data size: {X_test.shape}")
     
     # Model training
     model = RandomForestClassifier(n_estimators=100, random_state=42)
