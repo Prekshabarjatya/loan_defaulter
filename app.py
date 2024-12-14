@@ -5,11 +5,17 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
+import os
 
-# Load the data (assumed to be in CSV format)
+# Load the data (use file uploader if the file is not found)
 @st.cache
-def load_data():
-    data = pd.read_csv("loan_data.csv")
+def load_data(uploaded_file=None):
+    if uploaded_file is not None:
+        # Load data from the uploaded file
+        data = pd.read_csv(uploaded_file)
+    else:
+        # Handle the case where no file is uploaded
+        data = None
     return data
 
 # Preprocess the data (handle missing values, etc.)
@@ -21,8 +27,9 @@ def preprocess_data(data):
 # Train the model
 def train_model(data):
     # Feature selection and target variable
-    X = data.drop(columns=["loan_status"])
-    y = data["loan_status"].apply(lambda x: 1 if x == "Charged-off" else 0)
+    # Assuming the column indicating loan default is 'default'
+    X = data.drop(columns=["default"])  # Remove the target column from features
+    y = data["default"]  # Target variable (1 for default, 0 for no default)
     
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -42,7 +49,7 @@ def train_model(data):
 # Visualize the data
 def plot_data(data):
     st.subheader("Loan Default Status Distribution")
-    sns.countplot(x="loan_status", data=data)
+    sns.countplot(x="default", data=data)
     st.pyplot()
 
     # Additional visualizations can be added here
@@ -51,37 +58,43 @@ def plot_data(data):
 def app():
     st.title("LendingClub Loan Default Risk Prediction")
     
+    # File uploader for CSV file
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    
     # Load and preprocess the data
-    data = load_data()
-    data = preprocess_data(data)
-    
-    # Display basic statistics and data exploration
-    st.subheader("Data Preview")
-    st.write(data.head())
-    
-    # Show data visualizations
-    plot_data(data)
-    
-    # Train the machine learning model
-    model = train_model(data)
-    
-    # User input for prediction
-    st.subheader("Loan Application Prediction")
-    
-    applicant_income = st.number_input("Applicant Income", min_value=1000, max_value=1000000, step=1000)
-    loan_amount = st.number_input("Loan Amount", min_value=1000, max_value=1000000, step=1000)
-    # Additional features can be added here
-    
-    # Create a feature vector for the user input
-    user_input = [[applicant_income, loan_amount]]
-    
-    # Predict loan default status
-    if st.button("Predict"):
-        prediction = model.predict(user_input)
-        if prediction == 1:
-            st.write("Loan is likely to default (Charged-off).")
-        else:
-            st.write("Loan is likely to be fully paid.")
+    data = load_data(uploaded_file)
+    if data is not None:
+        data = preprocess_data(data)
+        
+        # Display basic statistics and data exploration
+        st.subheader("Data Preview")
+        st.write(data.head())
+        
+        # Show data visualizations
+        plot_data(data)
+        
+        # Train the machine learning model
+        model = train_model(data)
+        
+        # User input for prediction
+        st.subheader("Loan Application Prediction")
+        
+        applicant_income = st.number_input("Applicant Income", min_value=1000, max_value=1000000, step=1000)
+        loan_amount = st.number_input("Loan Amount", min_value=1000, max_value=1000000, step=1000)
+        # Additional features can be added here
+        
+        # Create a feature vector for the user input
+        user_input = [[applicant_income, loan_amount]]
+        
+        # Predict loan default status
+        if st.button("Predict"):
+            prediction = model.predict(user_input)
+            if prediction == 1:
+                st.write("Loan is likely to default (Charged-off).")
+            else:
+                st.write("Loan is likely to be fully paid.")
+    else:
+        st.write("Please upload a CSV file to proceed.")
     
 # Run the app
 if __name__ == "__main__":
