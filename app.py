@@ -15,9 +15,8 @@ def load_and_preprocess_data(file_path="LCDataDictionary.xlsx"):
         # Load the dataset
         df = pd.read_excel(file_path)
 
-        # Display dataset preview
-        st.write("Dataset Preview:")
-        st.write(df.head())
+        # Strip column names to remove extra spaces
+        df.columns = df.columns.str.strip()
 
         # Check if 'loan_status' exists
         if 'loan_status' not in df.columns:
@@ -28,7 +27,7 @@ def load_and_preprocess_data(file_path="LCDataDictionary.xlsx"):
         X = df.drop(columns=["loan_status", "id", "member_id"], errors="ignore")
         y = df["loan_status"]
 
-        return X, y
+        return X.fillna(0), y
     except Exception as e:
         st.error(f"Error loading the dataset: {e}")
         return None, None
@@ -37,15 +36,8 @@ def load_and_preprocess_data(file_path="LCDataDictionary.xlsx"):
 X, y = load_and_preprocess_data()
 
 if X is not None and y is not None:
-    # Handle missing values
-    X = X.fillna(0)  # Replace missing values with 0
-
-    # Display summary statistics
-    st.subheader("Summary Statistics")
-    st.write(X.describe())
-
     # Encode target variable
-    y = y.astype('category').cat.codes  # Convert to numeric categories
+    y = y.astype('category').cat.codes
 
     # Train-Test Split
     st.subheader("Model Training")
